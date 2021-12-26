@@ -3,8 +3,8 @@
 #include <utility>
 
 const char separator    = ' ';
-const int nameWidth     = 10;
-const int numWidth      = 6;
+int nameWidth     = 10;
+ int numWidth      = 10;
 Report::Report() = default;
 
 Report::Report(const Order &order) {
@@ -57,11 +57,15 @@ ostream &operator<<(ostream &os, Report &an) {
         for(int j=0;j<an[i].size();j++){
             Coffee coffee = an[i][j].getCoffee();
             Cake cake = an[i][j].getCake();
+            if(coffee.getName().size()>10 || cake.getName().size()>10){
+                nameWidth     = (coffee.getName().size()>cake.getName().size()?coffee.getName().size(): cake.getName().size());
+                numWidth      = nameWidth;
+            }
             printElement(j+1, nameWidth);
             printElement(coffee.getName(), numWidth);
-            printElement(coffee.getPrice(), numWidth);
+            printElement(" "+ to_string(coffee.getPrice()), numWidth);
             printElement(cake.getName(), numWidth);
-            printElement(cake.getPrice(), numWidth);
+            printElement(" "+ to_string(cake.getPrice()), numWidth);
             printElement(coffee.getPrice()+cake.getPrice(), numWidth);
             cout <<  endl;
         }

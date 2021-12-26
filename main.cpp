@@ -10,6 +10,7 @@
 #include <string>
 #include <list>
 #include <iostream>
+#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <random>
@@ -37,18 +38,28 @@ Date today = Date(27, 12, 2021);
 
 list<Order> orderBase;
 Report r;
+vector<Report> reports;
 
 const char *fileName = "/home/sofia/CLionProjects/LittleBigRestaurant/report.txt";
+const char *fileName2 = "/home/sofia/CLionProjects/LittleBigRestaurant/report.dat";
 
 void addOrder();
 
 void updateAndViewReport();
 
-void writeReportToFile(const char *string);
+void writeReportToFileNonBinary(const char *string);
 
-void readReportFile(const char *string);
+void readReportFileNonBinary(const char *string);
 
 void addWaiter();
+
+void writeReportToFileBinary(const char *name);
+
+void readReportFileBinary(const char *name2);
+
+void searchAssortment();
+
+void searchWaiter();
 
 template<typename T1>
 double AveragePrice(T1 list)//T1 - Report/Order
@@ -70,9 +81,16 @@ double AverageSize(T1 list)//T1 - Report
     return av / list.size();
 }
 
+struct WrongNumException : public std::exception {
+    const char *what() const throw() {
+        return "Wrong Number!";
+    }
+};
+
 void Menu() {
     int choice;
     do {
+        again:
         cout << "Main Menu\n";
         cout << "Here is Restaurant Database:\n";
         cout << "1 - New order\n";
@@ -84,12 +102,24 @@ void Menu() {
         cout << "7 - Change date\n";
         cout << "8 - Add waiter\n";
         cout << "9 - List of waiters\n";
+        cout << "10 -Search info\n";
         cout << "0 - Quit\n";
         cout << "You chose: ";
-        cin >> choice;
+        try {
+            cin >> choice;
+            if (choice > 10 || choice < 0) {
+                throw WrongNumException();
+            }
+        }
+        catch (WrongNumException &e) {
+            std::cout << e.what() << std::endl << std::endl;
+            goto again;
+        }
+
         cout << "- - - - - - - - - - - - - -\n";
 
         switch (choice) {
+
             case 1:
                 addOrder();
                 break;
@@ -109,11 +139,32 @@ void Menu() {
                 cout << r << endl;
                 break;
             case 5: {
-                writeReportToFile(fileName);
+                int ch;
+                cout << "Press 1 to write report in text file or 2 to write in binary file: ";
+                cin >> ch;
+                switch (ch) {
+                    case 1:
+                        writeReportToFileNonBinary(fileName);
+                        break;
+                    case 2:
+                        writeReportToFileBinary(fileName2);
+                        break;
+                }
                 break;
             }
             case 6:
-                readReportFile(fileName);
+                int ch;
+                cout << "Press 1 to read report from text file or 2 to read from binary file: ";
+                cin >> ch;
+                switch (ch) {
+                    case 1:
+                        readReportFileNonBinary(fileName);
+                        break;
+                    case 2:
+                        readReportFileBinary(fileName2);
+                        break;
+                }
+
                 break;
             case 7:
                 cout << "Enter day month year: ";
@@ -130,7 +181,21 @@ void Menu() {
                 }
                 cout << endl;
                 break;
+            case 10:
+                int ch1;
+                cout << "1 - search assortment, 2 - search waiter: ";
+                cin >> ch1;
+                switch (ch1) {
+                    case 1:
+                        searchAssortment();
+                        break;
+                    case 2:
+                        searchWaiter();
+                        break;
+                }
+                break;
             case 0:
+                reports.push_back(r);
                 break;
             default:
                 cout << "Main Menu\n";
@@ -144,6 +209,7 @@ void Menu() {
                 cout << "7 - Change date\n";
                 cout << "8 - Add waiter\n";
                 cout << "9 - List of waiters\n";
+                cout << "10 -Search info\n";
                 cout << "0 - Quit\n";
                 cout << "You chose: ";
                 cin >> choice;
@@ -151,6 +217,52 @@ void Menu() {
         }
     } while (choice != 0);
 }
+
+void searchWaiter() {
+    string w_name;
+    Person w;
+    cout <<"Enter name or surname of waiter: "<<endl;
+    cin>>w_name;
+    for(int i=0; i<waiters.getSize();i++){
+        if(waiters[i].getName() == w_name || waiters[i].getSurname() == w_name){
+            cout<<"Yes, this waiter is working with us. Personal info: "<<endl;
+            w = waiters[i].getPersonalInfo();
+            cout <<w<< ", responsibility: "<< waiters[i].getCategory()<<endl;
+        }
+    }
+}
+
+void searchAssortment() {
+    int ch;
+    menu:
+    cout << "1 - search coffee, 2 - search cake, 3 - exit: ";
+    cin >> ch;
+    string searchable;
+
+    if (ch == 1) {
+        cout << endl << "Enter name of coffee: ";
+        cin >> searchable;
+        if (CoffeeList.count(searchable) > 0) {
+            cout << "There is " << searchable << " coffee in restaurant. Its price is: " << CoffeeList[searchable]
+                 << endl;
+        } else {
+            cout << "Sorry, we don't have this coffee: " << searchable << endl;
+        }
+    } else if (ch == 2) {
+        cout << endl << "Enter name of cake: ";
+        cin >> searchable;
+        if (CakeList.count(searchable) > 0) {
+            cout << "There is " << searchable << " cake in restaurant. Its price is: " << CakeList[searchable] << endl;
+        } else {
+            cout << "Sorry, we don't have this cake: " << searchable << endl;
+        }
+    }
+    else if(ch!=3){
+        cout << "Wrong number" << endl;
+        goto menu;
+    }
+}
+
 
 void addWaiter() {
     cout << "Enter name surname day month year category: ";
@@ -162,15 +274,16 @@ void addWaiter() {
     waiters.addWaiter(w);
 }
 
-void writeReportToFile(const char *string) {
+void writeReportToFileBinary(const char *name) {
     fstream my_file;
-    my_file.open(string, ios::out);
+    my_file.open(name, ios::binary | ios::app);
     if (!my_file) {
         cout << "File not created!";
     } else {
         cout << "File created successfully!";
         my_file << "Restaurant Database" << endl;
         my_file << r;
+
         for (int i = 0; i < r.size(); i++) {
             for (int j = 0; j < r[i].size(); j++) {
                 Coffee coffee = r[i][j].getCoffee();
@@ -185,7 +298,31 @@ void writeReportToFile(const char *string) {
     }
 }
 
-void readReportFile(const char *string) {
+void writeReportToFileNonBinary(const char *string) {
+    fstream my_file;
+    my_file.open(string, ios::out);
+    if (!my_file) {
+        cout << "File not created!";
+    } else {
+        cout << "File created successfully!";
+        my_file << "Restaurant Database" << endl;
+        my_file << r;
+
+        for (int i = 0; i < r.size(); i++) {
+            for (int j = 0; j < r[i].size(); j++) {
+                Coffee coffee = r[i][j].getCoffee();
+                Cake cake = r[i][j].getCake();
+                my_file << "Dish" << j + 1 << ": " << "Coffee: " << coffee.getName() << " " << coffee.getPrice()
+                        << "$ Cake: " << cake.getName() << " " << cake.getPrice() << "$ Total price: "
+                        << coffee.getPrice() + cake.getPrice() << "$";
+                my_file << endl;
+            }
+        }
+        my_file.close();
+    }
+}
+
+void readReportFileNonBinary(const char *string) {
     fstream my_file;
     my_file.open(string, ios::in);
     if (!my_file) {
@@ -202,6 +339,25 @@ void readReportFile(const char *string) {
     }
     my_file.close();
 }
+
+void readReportFileBinary(const char *name2) {
+    fstream my_file;
+    my_file.open(name2, ios::binary);
+    if (!my_file) {
+        cout << "No such file";
+    } else {
+        char ch;
+        while (true) {
+            my_file >> ch;
+            if (my_file.eof())
+                break;
+            cout << ch;
+        }
+
+    }
+    my_file.close();
+}
+
 
 void updateAndViewReport() {
     for (const auto &order: orderBase) {
@@ -258,12 +414,19 @@ void addOrder() {
         Dish dish = Dish(coffee, cake);
         dishes.push_back(dish);
     }
-    int n = rand() % waiters.getSize() + 1;
+    srand((unsigned)time(0));
+    int n = (rand() % waiters.getSize()) + 1;
     Order order = Order(dishes, waiters[n - 1], today);
     orderBase.push_back(order);
 }
 
 
 int main() {
+    for (int i = 0; i < 9; i++) {
+        reports.push_back(r);
+    }
     Menu();
+    for (int i = 0; i < 10; i++) {
+        cout << reports[i];
+    }
 }
