@@ -40,8 +40,8 @@ list<Order> orderBase;
 Report r;
 vector<Report> reports;
 
-const char *fileName = "/home/sofia/CLionProjects/LittleBigRestaurant/report.txt";
-const char *fileName2 = "/home/sofia/CLionProjects/LittleBigRestaurant/report.dat";
+const char *fileName = "report.txt";
+const char *fileName2 = "report.dat";
 
 void addOrder();
 
@@ -84,6 +84,18 @@ double AverageSize(T1 list)//T1 - Report
 struct WrongNumException : public std::exception {
     const char *what() const throw() {
         return "Wrong Number!";
+    }
+};
+
+struct WrongCoffeeNameException : public std::exception {
+    const char *what() const throw() {
+        return "Wrong Coffee Name!";
+    }
+};
+
+struct WrongCakeNameException : public std::exception {
+    const char *what() const throw() {
+        return "Wrong Cake Name!";
     }
 };
 
@@ -375,18 +387,19 @@ void addOrder() {
     cin >> amountOfDishes;
     list<Dish> dishes;
     for (int j = 0; j < amountOfDishes; j++) {
-        cout << "1) Enter 1 to view standard menu or 0 to enter new items:";
+        cout << "Enter 1 to view standard menu or 0 to enter new items:";
         cin >> choice;
         switch (choice) {
             case 0:
                 cout << "Enter coffee name and price: ";
                 cin >> coffee;
-                CoffeeList.insert(pair<string, double>(coffee.getName(), coffee.getPrice()));
+                CoffeeList.insert(coffee.getCoffeeInfo());
                 cout << "Enter cake name and price: ";
                 cin >> cake;
                 CakeList.insert(cake.getCakeInfo());
                 break;
             case 1:
+                again:
                 cout << "Here is is the standard menu: " << endl;
                 cout << endl << "Coffee Menu: name price" << endl;
                 for (const auto &c: CoffeeList) {
@@ -396,18 +409,36 @@ void addOrder() {
                 cout << "Enter name of coffee: " << endl;
                 string name;
                 cin >> name;
-                cake.setName(name);
-                cake.setPrice(CoffeeList[name]);
-                cout << endl;
+                try{
+                    if (CoffeeList.count(name)<1) {
+                            throw WrongCoffeeNameException();
+                        }
+                    coffee.setName(name);
+                    coffee.setPrice(CoffeeList[name]);
+                    cout << endl;
+                }
+                catch(WrongCoffeeNameException& e){
+                    std::cout << e.what() << std::endl << std::endl;
+                    goto again;
+                }
                 cout << "Cake Menu: name price" << endl;
                 for (const auto &c: CakeList) {
                     cout << c.first << " " << c.second << endl;
                 }
                 cout << "Enter name of cake: " << endl;
                 cin >> name;
-                cake.setName(name);
-                cake.setPrice(CakeList[name]);
-                cout << endl;
+                try {
+                    if (CakeList.count(name) < 1) {
+                        throw WrongCakeNameException();
+                    }
+                    cake.setName(name);
+                    cake.setPrice(CakeList[name]);
+                    cout << endl;
+                }
+                catch(WrongCakeNameException& e){
+                    std::cout << e.what() << std::endl << std::endl;
+                    goto again;
+                }
                 break;
         }
         cout << endl;
